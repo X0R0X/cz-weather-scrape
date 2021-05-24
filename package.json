@@ -16,7 +16,8 @@
   "dependencies": {
     "apify": "^1.2.1",
     "apify-client": "^1.2.2",
-    "puppeteer": "9.1.1"
+    "puppeteer": "9.1.1",
+    "sleep-promise": "9.1.0"
   },
   "devDependencies": {
     "sleep-promise": "^9.1.0"
