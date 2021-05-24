@@ -6,6 +6,9 @@ async function main() {
         const citiesDataset = await Apify.openDataset(cfg.DATASET_CITIES);
         let cityData = await citiesDataset.getData();
 
+        // Fetch list of czech cities from wikipedia and then use pocasi.seznam.cz autocomplete search API to
+        // get city data (geolocation) and proper url. I just take the first result, so the city list doesn't exactly
+        // reflect the list from wikipedia due to possible name collisions. We do this only once (on the first run).
         if (cityData.items.length === 0) {
             console.log('No city list, fetching...');
 
@@ -20,6 +23,9 @@ async function main() {
             cityData = await citiesDataset.getData();
         }
 
+        // Scrape weather forecast for our city list. We get the forecast for `today` and next 5 days. After a while
+        // (at cca 95% progress) seznam API gets pissed and starts to return HTTP GOAWAY. We just wait for a while and
+        // repeat the scraping for urls that errored - no need for proxy shenanigans.
         const cityList = cityData.items[0]['cities'];
 
         console.log(`Scraping weather for ${cityList.length} cities...`);
