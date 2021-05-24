@@ -1,7 +1,7 @@
 const Apify = require('apify');
 const {RequestList} = require("apify");
-const urls = require('./urls.js')
-
+const urls = require('./urls.js');
+const cfg = require('./config.js');
 
 function formatString(str, arguments) {
     for (let i in arguments) {
@@ -64,8 +64,11 @@ async function fetchCityInfos(cityList, minConcurrency, maxConcurrency) {
                     ]
                 )
             });
+
             counter++;
-            console.log(`Fetched ${counter}/${maxCities} ${(counter / maxCities * 100).toFixed(2)}%`);
+            if (cfg.LOG_PROGRESS) {
+                console.log(`Fetched ${counter}/${maxCities} ${(counter / maxCities * 100).toFixed(2)}%`);
+            }
         },
     });
     await crawler.run()

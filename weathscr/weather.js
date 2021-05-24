@@ -1,18 +1,13 @@
 const Apify = require('apify');
 const {RequestList} = require("apify");
+const sleep = require('sleep-promise');
+const cfg = require('./config.js');
 
 
-module.exports.run = async (cityList, minConcurrency, maxConcurrency) => {
-    const urls = [];
-    cityList.forEach((c) => {
-        urls.push(c['url']);
-    });
-
-    const requestList = new RequestList({sources: urls});
-    await requestList.initialize()
-
+async function runCrawler(requestList, minConcurrency, maxConcurrency) {
     let counter = 0
-    const maxCities = urls.length;
+    const maxCities = requestList.length();
+    let erroredUrls = [];
     const weather = {};
     const crawler = new Apify.CheerioCrawler({
         requestList,
@@ -30,13 +25,55 @@ module.exports.run = async (cityList, minConcurrency, maxConcurrency) => {
             weather[cityName] = days;
 
             counter++;
-            console.log(`Fetched ${cityName} ${counter}/${maxCities} ${(counter / maxCities * 100).toFixed(2)}%`);
+            if (cfg.LOG_PROGRESS) {
+                console.log(
+                    `Fetched ${cityName} ${counter}/${maxCities} ${(counter / maxCities * 100).toFixed(2)}%`
+                );
+            }
         },
-        handleFailedRequestFunction: async () => {
+        handleFailedRequestFunction: async ({request}) => {
+            erroredUrls.push(request.url);
 
+            console.log(`Error for url ${request.url}, added to errored urls.`);
         }
     });
     await crawler.run();
 
+    return {
+        'weather': weather,
+        'erroredUrls': erroredUrls
+    }
+}
+
+
+module.exports.run = async (cityList, minConcurrency, maxConcurrency) => {
+    const urls = [];
+    cityList.forEach((c) => {
+        urls.push(c['url']);
+    });
+
+    let requestList = new RequestList({sources: urls});
+    await requestList.initialize()
+
+    let result = await runCrawler(requestList, minConcurrency, maxConcurrency);
+    let weather = result['weather'];
+    while (true) {
+        const erroredUrls = result['erroredUrls']
+        if (erroredUrls.length === 0) {
+            break;
+        } else {
+            let requestList = new RequestList({sources: erroredUrls});
+            await requestList.initialize()
+            console.log(
+                `There were ${erroredUrls.length} errors during scraping (${Object.keys(weather).length} OK)), ` +
+                `waiting for ${cfg.SLEEP_ON_GOAWAY}ms and running again.`
+            );
+
+            await sleep(cfg.SLEEP_ON_GOAWAY);
+
+            result = await runCrawler(requestList, minConcurrency, maxConcurrency);
+            weather = Object.assign({}, weather, result['weather']);
+        }
+    }
     return weather;
 }

@@ -31,7 +31,7 @@ async function main() {
         const weatherDataset = await Apify.openDataset(cfg.DATASET_WATHER);
         await weatherDataset.pushData(weatherData);
 
-        console.log(`Weather data scraped for ${weatherData.length} cities.`);
+        console.log(`Weather data scraped for ${Object.keys(weatherData).length} cities.`);
     })
 }
 
