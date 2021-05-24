@@ -31,10 +31,15 @@ async function runCrawler(requestList, minConcurrency, maxConcurrency) {
                 );
             }
         },
-        handleFailedRequestFunction: async ({request}) => {
-            erroredUrls.push(request.url);
-
-            console.log(`Error for url ${request.url}, added to errored urls.`);
+        handleFailedRequestFunction: async ({request,error}) => {
+            // As far as I know, the server just closed connection and I haven't found any other way to compare the
+            // error.
+            if (error.message === 'New streams cannot be created after receiving a GOAWAY') {
+                erroredUrls.push(request.url);
+                console.log(`Error '${error.message}' for url ${request.url}, added to errored urls.`);
+            } else {
+                console.log(`Error '${error.message} for url ${request.url} !`);
+            }
         }
     });
     await crawler.run();
